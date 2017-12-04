@@ -1,0 +1,1 @@
+start javaw -cp rigclient.jar;lib\RedundantTrussRig.jar au.edu.uts.eng.remotelabs.rigclient.main.RigClientMain
