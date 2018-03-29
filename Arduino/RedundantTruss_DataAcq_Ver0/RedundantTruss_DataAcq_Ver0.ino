@@ -54,6 +54,10 @@ boolean stringComplete = false;      // Serial Comm - whether the string is comp
 // - Time Management
 unsigned long prevTime;
 
+// Initial flag
+boolean iniFlag;
+int dataReady;
+
 // --------------- Gauge Declaration ----------------------------
 HX711 gauge[10] = {HX711(30,40), HX711(31,41),HX711(32,42),HX711(33,43),HX711(34,44),HX711(35,45),HX711(36,46),HX711(37,47),HX711(38,48),HX711(39,49)};
 
@@ -150,7 +154,9 @@ void requestValue(int addr){
       }
       Serial.print(mode);
       Serial.print(";");
-      Serial.println(0);
+      Serial.print(0);
+      Serial.print(";");
+      Serial.println(dataReady);
       break;
     default:
       Serial.println("Err-addr");
@@ -242,13 +248,17 @@ void setup() {
   for (int i=0;i<10;i++){
     scaleChk[i] = false;
     offsetChk[i] = false;
-    faultChk[i] = false;
+    faultChk[i] = true;
   }
 
   // initialize gauges
   for (int i=0;i<10;i++){
     gauge[i].read();
   }
+
+  //set initial flag
+  iniFlag = true;
+  dataReady = 0;
 }
 
 // --------------- Main: Function loop -----------------------------
@@ -271,6 +281,11 @@ void loop() {
     // mode 4: ready (idle)
     // mode 5: Operation
       if (gaugeRead(currentGauge)){
+        if ((currentGauge == 7)&& iniFlag){
+        // complete of scan of all gauges (0-7), note gauge 8 & 9 not installed
+          iniFlag = false;
+          dataReady = 1;
+        }
         // success, move the gauge pointer to next gauge
         nextGauge();
         // reset retry count
@@ -287,6 +302,7 @@ void loop() {
           retryCount++;
         }
       }
+      
     }else if (mode == 6){
       delay(10);
       mode = 1;

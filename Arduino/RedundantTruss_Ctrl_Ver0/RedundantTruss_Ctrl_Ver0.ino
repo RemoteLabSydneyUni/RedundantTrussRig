@@ -25,12 +25,12 @@
 
 // --------------- Constant Declaration -------------------------
 //  - Performance Parameter Definition
-const float TENSION_DEADBAND = 5.0;        // Acceptable bias between tension reading and target
+const float TENSION_DEADBAND = 1.0;        // Acceptable bias between tension reading and target
 const float TENSION_MAX_DEV = 20.0;        // Acceptable max deviation from
 const long MAX_ALLOW_STEP = 380000L;           // Maximum allowed step (end of screw)
 const long MIN_ALLOW_STEP = 0L;               // Maximum allowed step (end of screw)
 const float MAX_SET_TENSION = 200.0;        // Maximum allowed loading target
-const float MIN_SET_TENSION = 5.6;         // Minimum loading (instrument readable)
+const float MIN_SET_TENSION = 5;         // Minimum loading (instrument readable)
 const int SLEEP_TIME_DEFAULT = 1000;        // Default Sleep time (ms)
 
 // --------------- Variable Declaration -------------------------
@@ -84,8 +84,8 @@ static void thModeManager(void *arg){
     }else if (operationMode == 5){
       // Cleanup
       tgtAngleStep = curAngleStep; // call stop of angel control
-      tgtLoad = MIN_SET_TENSION;   // release load
-      if ((curLoad <= (MIN_SET_TENSION + TENSION_DEADBAND))||(faultTension == true)){
+      tgtLoad = 25;   // release load
+      if ((curLoad <= (10 + TENSION_DEADBAND))||(faultTension == true)){
         operationMode = 1;
       }
     }
@@ -106,7 +106,7 @@ static void thInputHandling(void *arg){
         // analyze value                     
         for (int i = 0; i<10; i++){
           // filter out bad value
-          if ((avgLoad[i]<= MAX_SET_TENSION + TENSION_DEADBAND)&& (avgLoad[i]>= MIN_SET_TENSION)){
+          if ((avgLoad[i]<= 500 + TENSION_DEADBAND)&& (avgLoad[i]>= MIN_SET_TENSION)){
             val = val + avgLoad[i];
             count++;
           }
@@ -159,20 +159,20 @@ static void thLoadCtrl(void *arg){
             loadMode = 0;
           }
         }
-      }else{                                            // with BAD input, lock in Manual mode
-        loadMode = 0;
-        if (loadTarget != 0){                           // only set load output once per user command
-          loadOutput = abs(loadTarget);                 // - calculate step from specified steps from user
-          if (loadTarget >= 0){
-            loadDirection = true;
-          }else{
-            loadDirection = false;
-          }
-        }
-        loadTarget =0;                                 //reset step target
+//      }else{                                            // with BAD input, lock in Manual mode
+//        loadMode = 0;
+//        if (loadTarget != 0){                           // only set load output once per user command
+//          loadOutput = abs(loadTarget);                 // - calculate step from specified steps from user
+//          if (loadTarget >= 0){
+//            loadDirection = true;
+//          }else{
+//            loadDirection = false;
+//          }
+//        }
+//        loadTarget =0;                                 //reset step target
       }
     }
-    chThdSleepMilliseconds(100);
+    chThdSleepMilliseconds(500);
   }  
 }
 
@@ -231,7 +231,7 @@ static void thAngleCtrl(void *arg){
           }
         }
       }else if ((faultTension = true)&&(angleMode == 1)){  // Automode, when load reading fail, kick to manual mode
-        angleMode = 0;  
+        //angleMode = 0;  
       }else if (angleMode == 2){                      // Calibration Mode
         refAngleStep = curAngleStep;                  // - reset reference point
         tgtAngleStep = curAngleStep;
@@ -407,7 +407,9 @@ void requestValue(int addr){
       Serial.print(";");      
       Serial.print(operationMode);
       Serial.print(";");
-      Serial.println(0);
+      Serial.print(0);
+      Serial.print(";");
+      Serial.println(!faultTension);    //use load gauge fault signal as ready flag. 1 = ready; 0 = notready
       break;
     default:
       Serial.println("Err-addr");
@@ -503,7 +505,7 @@ long calcLoadOutput(){
     loadDirection = false;
   }
   if (abs(tgtLoad - curLoad)> TENSION_DEADBAND){
-    outputVal = min((long)(abs(tgtLoad - curLoad)/0.02),25);
+    outputVal = min((long)(abs(tgtLoad - curLoad)/0.1),1000);
   }else{
     outputVal = 0;
   }
