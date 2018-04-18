@@ -42,11 +42,12 @@
 //  - Performance Parameter Definition
 const float TENSION_DEADBAND = 1.0;        // Acceptable bias between tension reading and target (N)
 const float TENSION_MAX_DEV = 20.0;        // Acceptable max deviation from
-const int DISTANCE_DEADBAND = 5;           // Acceptable bias between distance reading and target (mm)
+const int DISTANCE_DEADBAND_START = 15;    // Acceptable bias between distance reading and target (mm) to start motor action
+const int DISTANCE_DEADBAND_STOP = 5;      // Acceptable bias between distance reading and target (mm) to stop motor action 
 const int MAX_DISTANCE = 320;              // Maximum allowed distance (end of screw)
 const int MIN_DISTANCE = 75;               // Minimum allowed distance (end of screw)
 const float MAX_SET_TENSION = 325.0;       // Maximum allowed loading target
-const float MAX_INTERLOCK_TENSION = 275.0;       // Maximum allowed loading target when changing angle
+const float MAX_INTERLOCK_TENSION = 100.0;       // Maximum allowed loading target when changing angle
 const float MIN_SET_TENSION = 25;          // Minimum loading (instrument readable)
 const int SLEEP_TIME_DEFAULT = 1000;       // Default Sleep time (ms)
 
@@ -69,10 +70,12 @@ static long angleOutput;                    // Target Steps to move in Auto mode
 static long angleStepTarget;                // Target Steps to move in Manual mode
 static boolean angleDirection;              // Target Direction to move 
 
+static boolean angleCtrlActionTracker;
+
 // - Load Sensor Input (Load Cell)
-static float loadScale = 6272.7;            // scale of load strain gauge (With default value)
+static float loadScale = 6997.683;          // scale of load strain gauge (With default value)
 static boolean loadScaleChk = false;
-static long loadOffset = -13340L;           // offset of load strain gauge (With default value)
+static long loadOffset = -41324L;           // offset of load strain gauge (With default value)
 static boolean loadOffsetChk = false;
 static float curLoad;
 static float tgtLoad;
@@ -111,6 +114,7 @@ static boolean snapshotInterlock = false;
 
 static unsigned long timeoutTimer;
 
+static int angleInputWD = 0;
 // - Debug
 static int debugReading = 0;
 
@@ -223,6 +227,12 @@ static void thAngleInputHandling(void *arg){
       }else{
         debugReading = -1;
         faultDistance = true;
+      }
+      if(angleInputWD > 10){
+        faultDistance = true;
+      }
+      if(angleInputWD <999){
+        angleInputWD++;
       }
     }    
     chThdSleepMilliseconds(100);
@@ -441,6 +451,8 @@ void setup() {
   reqOut = false;
   commFail = false;
 
+  angleCtrlActionTracker = false;
+
   // initialize strain gauges
   loadGauge.read();
 
@@ -570,6 +582,8 @@ void serialEvent1() {
         rawDistance = (int)strtol(currptr, &endptr, 10);
         currptr = endptr+1;
         rawTimeOut = (int)strtol(currptr, &endptr, 10);
+        currptr = endptr+1;
+        angleInputWD = (int)strtol(currptr, &endptr, 10);
       }
       for (int i=0;i<64;i++){
         inputString1[i] = '\0';
@@ -628,7 +642,9 @@ void requestValue(int addr){
       Serial.print(";");
       Serial.print(rawTimeOut);
       Serial.print(";");
-      Serial.println(snapshotInterlock);    
+      Serial.print(snapshotInterlock);
+      Serial.print(";");
+      Serial.println(angleInputWD);    
       break;
     default:
       Serial.println("Err-addr");
@@ -686,13 +702,21 @@ void setValue(int addr, char val[]){
 // --------------- Subroutine: Angle output calculation ----------
 long calcAngleOutput(){
   long outputVal;
+  int diff;
   if (tgtDistance > curDistance){
     angleDirection = false;
   }else{
     angleDirection = true;
   }
-  if (abs(tgtDistance - curDistance)> DISTANCE_DEADBAND){
-    outputVal = min((long)(abs(tgtDistance - curDistance)*40),400);
+  diff = abs(tgtDistance - curDistance);
+  if (diff> DISTANCE_DEADBAND_START){
+    angleCtrlActionTracker = true;
+  }
+  if (diff<= DISTANCE_DEADBAND_STOP){
+    angleCtrlActionTracker = false;
+  }
+  if (angleCtrlActionTracker){
+      outputVal = min((long)(diff*40),400);
   }else{
     outputVal = 0;
   }
@@ -701,13 +725,21 @@ long calcAngleOutput(){
 // --------------- Subroutine: Load output calculation ----------
 long calcLoadOutput(){
   long outputVal;
+  float diff;
   if (tgtLoad > curLoad){
     loadDirection = true;
   }else{
     loadDirection = false;
   }
-  if (abs(tgtLoad - curLoad)> TENSION_DEADBAND){
-    outputVal = min((long)(abs(tgtLoad - curLoad)/0.2),1000);
+  diff = abs(tgtLoad - curLoad);
+  if (diff> TENSION_DEADBAND){
+    if (diff < 20.0){
+      outputVal = min((long)(diff*5.0),1000);
+    }else if (diff< 50.0){
+      outputVal = min((long)((diff-20.0)*10.0)+100,5000);
+    }else{
+      outputVal = min((long)((diff-50)*100.0) + 400,10000);
+    }
   }else{
     outputVal = 0;
   }

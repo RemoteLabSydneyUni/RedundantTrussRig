@@ -28,7 +28,8 @@ VL53L0X sensor;
 int measured = 0;
 boolean tOutFlag = true;
 boolean led = false;
-unsigned long prevTime = 0L;
+unsigned long prevTimeLED = 0L;
+unsigned long prevTimeRead = 0L;
 char inputString[64] = "";           // Serial Comm - a string to hold incoming data
 int inputPointer;                    // Serial Comm - input store pointer
 boolean stringComplete = false;      // Serial Comm - whether the string is complete
@@ -49,29 +50,35 @@ void setup()
   // instead, provide a desired inter-measurement period in
   // ms (e.g. sensor.startContinuous(100)).
   sensor.startContinuous();
-  prevTime = millis();
+  prevTimeLED = millis();
+  prevTimeRead = millis();
 }
 
 // --------------- Main Operation -------------------------------
 void loop()
 {
-  measured = sensor.readRangeContinuousMillimeters();
-  tOutFlag = sensor.timeoutOccurred();
-  if(!tOutFlag){
-    if (millis()< prevTime){
-      prevTime = millis();
-    }else if ((millis()-prevTime)>250){
-      digitalWrite(13,led);
-      led = !led;
-      prevTime = millis();
-//      Serial.print(measured);
-//      Serial.print(" at ");
-//      Serial.println(millis()); // for debugging
+  if (millis()< prevTimeRead){
+      prevTimeRead = millis();
+  }else if ((millis()-prevTimeRead)>50){
+    measured = sensor.readRangeContinuousMillimeters();
+    tOutFlag = sensor.timeoutOccurred();
+    if(!tOutFlag){
+      if (millis()< prevTimeLED){
+        prevTimeLED = millis();
+      }else if ((millis()-prevTimeLED)>250){
+        digitalWrite(13,led);
+        led = !led;
+        prevTimeLED = millis();
+  //      Serial.print(measured);
+  //      Serial.print(" at ");
+  //      Serial.println(millis()); // for debugging
+      }
+    }else{
+      digitalWrite(13,HIGH);
     }
-  }else{
-    digitalWrite(13,HIGH);
+    prevTimeRead = millis();
   }
-  delay(50);
+  delay(1);
 }
 
 // --------------- Serial Event Handling ------------------------
@@ -104,7 +111,9 @@ void serialEvent() {
       Serial.print("Cpl-");
       Serial.print(measured);
       Serial.print(";");
-      Serial.println(tOutFlag);
+      Serial.print(tOutFlag);
+      Serial.print(";");
+      Serial.println("0");
       Serial.flush();
     }else{
       Serial.println("Err-request");
