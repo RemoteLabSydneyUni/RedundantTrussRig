@@ -58,7 +58,8 @@ unsigned long prevTime;
 unsigned long initTime;
 
 // --------------- Gauge Declaration ----------------------------
-HX711 gauge[10] = {HX711(30,40), HX711(31,41),HX711(32,42),HX711(33,43),HX711(34,44),HX711(35,45),HX711(36,46),HX711(37,47),HX711(38,48),HX711(39,49)};
+HX711 gauge[10] = {HX711(32,42),HX711(33,43),HX711(34,44),HX711(35,45),HX711(36,46),HX711(37,47),HX711(38,48),HX711(39,49), HX711(30,40), HX711(31,41)};
+// Note: Last 2 gauge are not installed. Placeholder for future expansion. Avoid Pin 30 & 40 in future installation. Suspect faulty.
 
 // --------------- Function: Pre-calibration Check --------------
 int preCalCheck(){
@@ -121,7 +122,7 @@ void scheduling(){
   if (gaugeRead(currentGauge)){
     // success, move the gauge pointer to next gauge
     if (currentGauge == 7){
-      currentGauge = 0;
+      currentGauge = 0;         
     }else{
       currentGauge++;
     }
@@ -156,7 +157,7 @@ void requestValue(int addr){
         Serial.print(strain[i]);
         Serial.print(";");
       }
-      Serial.println(strain[4]);
+      Serial.println(strain[4]);      
       break;
     case 2:
       Serial.print("Cpl-");
@@ -223,37 +224,31 @@ void setup() {
   Serial.begin(115200);
   //Serial.println("Comm Started");
   // initialize Pins
-  pinMode(30,INPUT);                   // Pin 30: Strain Gauge 1, DATA channel
-  pinMode(31,INPUT);                   // Pin 31: Strain Gauge 2, DATA channel
-  pinMode(32,INPUT);                   // Pin 32: Strain Gauge 3, DATA channel
-  pinMode(33,INPUT);                   // Pin 33: Strain Gauge 4, DATA channel
-  pinMode(34,INPUT);                   // Pin 34: Strain Gauge 5, DATA channel
-  pinMode(35,INPUT);                   // Pin 35: Strain Gauge 6, DATA channel
-  pinMode(36,INPUT);                   // Pin 36: Strain Gauge 7, DATA channel
-  pinMode(37,INPUT);                   // Pin 37: Strain Gauge 8, DATA channel
-//  pinMode(38,INPUT);                   // Pin 38: Strain Gauge 9, DATA channel
-//  pinMode(39,INPUT);                   // Pin 39: Strain Gauge 10, DATA channel
+  pinMode(32,INPUT);                   // Pin 32: Strain Gauge 1, DATA channel
+  pinMode(33,INPUT);                   // Pin 33: Strain Gauge 2, DATA channel
+  pinMode(34,INPUT);                   // Pin 34: Strain Gauge 3, DATA channel
+  pinMode(35,INPUT);                   // Pin 35: Strain Gauge 4, DATA channel
+  pinMode(36,INPUT);                   // Pin 36: Strain Gauge 5, DATA channel
+  pinMode(37,INPUT);                   // Pin 37: Strain Gauge 6, DATA channel
+  pinMode(38,INPUT);                   // Pin 38: Strain Gauge 7, DATA channel
+  pinMode(39,INPUT);                   // Pin 39: Strain Gauge 8, DATA channel
   
-  pinMode(40,OUTPUT);                  // Pin 40: Strain Gauge 1, CLK signal
-  digitalWrite(40,LOW);
-  pinMode(41,OUTPUT);                  // Pin 41: Strain Gauge 2, CLK signal
-  digitalWrite(41,LOW);
-  pinMode(42,OUTPUT);                  // Pin 42: Strain Gauge 3, CLK signal
+  pinMode(42,OUTPUT);                  // Pin 42: Strain Gauge 1, CLK signal
   digitalWrite(42,LOW);
-  pinMode(43,OUTPUT);                  // Pin 43: Strain Gauge 4, CLK signal
+  pinMode(43,OUTPUT);                  // Pin 43: Strain Gauge 2, CLK signal
   digitalWrite(43,LOW);
-  pinMode(44,OUTPUT);                  // Pin 44: Strain Gauge 5, CLK signal
+  pinMode(44,OUTPUT);                  // Pin 44: Strain Gauge 3, CLK signal
   digitalWrite(44,LOW);
-  pinMode(45,OUTPUT);                  // Pin 45: Strain Gauge 6, CLK signal
+  pinMode(45,OUTPUT);                  // Pin 45: Strain Gauge 4, CLK signal
   digitalWrite(45,LOW);
-  pinMode(46,OUTPUT);                  // Pin 46: Strain Gauge 7, CLK signal
+  pinMode(46,OUTPUT);                  // Pin 46: Strain Gauge 5, CLK signal
   digitalWrite(46,LOW);
-  pinMode(47,OUTPUT);                  // Pin 47: Strain Gauge 8, CLK signal
+  pinMode(47,OUTPUT);                  // Pin 47: Strain Gauge 6, CLK signal
   digitalWrite(47,LOW);
-//  pinMode(48,OUTPUT);                  // Pin 48: Strain Gauge 9, CLK signal
-//  digitalWrite(48,LOW);
-//  pinMode(49,OUTPUT);                  // Pin 49: Strain Gauge 10, CLK signal
-//  digitalWrite(49,LOW);
+  pinMode(48,OUTPUT);                  // Pin 48: Strain Gauge 7, CLK signal
+  digitalWrite(48,LOW);
+  pinMode(49,OUTPUT);                  // Pin 49: Strain Gauge 8, CLK signal
+  digitalWrite(49,LOW);
 
   //Serial.println("Pin Mode Set");
   // initialize mode
